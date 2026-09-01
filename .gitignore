@@ -1,0 +1,23 @@
+# Local container data & model weights (prevents multi-GB LLM weights from being tracked)
+ollama-data/
+floci-data/
+dist/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

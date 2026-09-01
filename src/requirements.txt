@@ -1,0 +1,3 @@
+# Zvix runtime dependencies
+# The Lambda proxy relies on Python standard library modules for sub-millisecond initialization.
+

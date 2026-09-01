@@ -1,0 +1,33 @@
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: floci-emulator
+    ports:
+      - "4566:4566"
+    environment:
+      - AWS_DEFAULT_REGION=eu-west-2
+      - FLOCI_STORAGE_MODE=hybrid
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./floci-data:/var/lib/floci
+    networks:
+      - security-net
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-llm-engine
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama
+    networks:
+      - security-net
+    restart: unless-stopped
+
+networks:
+  security-net:
+    name: security-net
+    driver: bridge
