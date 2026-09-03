@@ -41,12 +41,48 @@ DLP_PATTERNS: List[Tuple[str, re.Pattern]] = [
     ),
 ]
 
+INJECTION_PATTERNS: List[Tuple[str, re.Pattern]] = [
+    (
+        'INSTRUCTION_OVERRIDE',
+        re.compile(
+            r'(?:ignore|disregard|forget|bypass)\s+(?:all\s+)?(?:previous|prior|system|initial)\s+(?:instructions|prompts|directions|rules)',
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        'SYSTEM_PROMPT_EXTRACTION',
+        re.compile(
+            r'(?:system\s+prompt\s+override|show\s+me\s+your\s+system\s+prompt|print\s+initial\s+instructions)',
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        'JAILBREAK_PERSONA',
+        re.compile(
+            r'(?:jailbreak\s+mode|act\s+as\s+dan|do\s+anything\s+now|developer\s+mode\s+enabled|unrestricted\s+mode)',
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        'DELIMITER_INJECTION_ATTACK',
+        re.compile(
+            r'(?:```system|\[system\]|<\|im_start\|>system|<system>)',
+            re.IGNORECASE,
+        ),
+    ),
+]
+
 
 def scan_content(text: str) -> Tuple[bool, Optional[str], Optional[str]]:
     for rule, pattern in DLP_PATTERNS:
         if pattern.search(text):
             logger.warning(f'DLP rule matched: {rule}')
             return True, 'DATA_LOSS_PREVENTION_VIOLATION', rule
+
+    for rule, pattern in INJECTION_PATTERNS:
+        if pattern.search(text):
+            logger.warning(f'Prompt injection rule matched: {rule}')
+            return True, 'PROMPT_INJECTION_DETECTED', rule
 
     return False, None, None
 
