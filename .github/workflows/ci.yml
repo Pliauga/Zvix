@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r src/requirements.txt
+          pip install flake8
+
+      - name: Lint & compile check
+        run: |
+          python -m py_compile src/zvix.py scripts/test_attacks.py
+          flake8 src/ --count --max-line-length=120 --statistics || true
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Deploy infrastructure
+        run: |
+          chmod +x scripts/deploy.sh
+          ./scripts/deploy.sh
+
+      - name: Run red team tests
+        run: python scripts/test_attacks.py
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
