@@ -15,29 +15,50 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install tooling
         run: |
-          pip install --upgrade pip
-          pip install -r src/requirements.txt
-          pip install flake8
+          python -m pip install --upgrade pip
+          python -m pip install -r src/requirements.txt
+          python -m pip install flake8
 
-      - name: Lint & compile check
+      - name: Lint and compile
         run: |
           python -m py_compile src/zvix.py scripts/test_attacks.py
-          flake8 src/ --count --max-line-length=120 --statistics || true
+          flake8 src/ scripts/ --count --statistics
 
-      - name: Start services
-        run: docker compose up -d
-
-      - name: Deploy infrastructure
+      - name: Enforce the 120 column limit on shell scripts
         run: |
-          chmod +x scripts/deploy.sh
-          ./scripts/deploy.sh
+          status=0
+          for file in scripts/*.sh; do
+            offenders=$(awk 'length > 120 { print FILENAME":"FNR }' "${file}" | wc -l)
+            if [ "${offenders}" -ne 0 ]; then
+              echo "::error file=${file}::${offenders} line(s) exceed 120 characters"
+              status=1
+            fi
+          done
+          exit "${status}"
 
-      - name: Run red team tests
-        run: python scripts/test_attacks.py
+      - name: Start emulator stack
+        run: docker compose up -d --wait
+
+      - name: Direct-mode security suite
+        run: python scripts/test_attacks.py --mode direct
+
+      - name: Deploy proxy and authorizer
+        run: |
+          export ZVIX_API_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(24))')"
+          echo "ZVIX_API_TOKEN=${ZVIX_API_TOKEN}" >> "${GITHUB_ENV}"
+          ./scripts/deploy.sh | tee deploy.log
+          URL=$(grep -o 'Endpoint: .*' deploy.log | awk '{print $2}')
+          if [ -z "${URL}" ]; then
+            echo "::error::deploy.sh did not report a gateway endpoint"
+            exit 1
+          fi
+          echo "GATEWAY_URL=${URL}" >> "${GITHUB_ENV}"
+
+      - name: HTTP-mode security suite
+        run: python scripts/test_attacks.py --mode http --endpoint "${GATEWAY_URL}"
 
       - name: Teardown
         if: always()

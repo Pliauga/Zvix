@@ -1,9 +1,11 @@
 services:
   floci:
-    image: floci/floci:latest
+    # Pinned by version tag and digest; see README "Image pinning" for verification.
+    image: floci/floci:2.4.0@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c
     container_name: floci-emulator
     ports:
-      - "4566:4566"
+      # FLOCI_PORT lets a second emulator coexist with an already running instance on 4566.
+      - "127.0.0.1:${FLOCI_PORT:-4566}:4566"
     environment:
       - AWS_DEFAULT_REGION=eu-west-2
       - FLOCI_STORAGE_MODE=hybrid
@@ -14,17 +16,42 @@ services:
       - ./floci-data:/var/lib/floci
     networks:
       - security-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # The containerised Lambda executor chroots into each function root and drops to the function user;
+    # these three capabilities are the minimum it needs.
+    cap_add:
+      - SYS_CHROOT
+      - SETUID
+      - SETGID
     restart: unless-stopped
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by version tag and index digest; see README "Image pinning" for verification.
+    image: ollama/ollama:0.5.4@sha256:18bfb1d605604fd53dcad20d0556df4c781e560ebebcd923454d627c994a0e37
     container_name: ollama-llm-engine
-    ports:
-      - "11434:11434"
+    # No host port: the engine is reachable only from the compose network.
+    expose:
+      - "11434"
+    environment:
+      # Keep the model resident: an eviction costs 10s+ of reload before generation.
+      OLLAMA_KEEP_ALIVE: "-1"
     volumes:
       - ./ollama-data:/root/.ollama
     networks:
       - security-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 5s
     restart: unless-stopped
 
 networks:
