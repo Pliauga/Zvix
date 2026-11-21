@@ -41,7 +41,6 @@ never returned to the caller; they appear in the structured log line.
 | `scripts/deploy.sh` | builds `dist/zvix.zip`, deploys both Lambdas, creates the API and route, prints the endpoint |
 | `scripts/test_attacks.py` | security suite, 37 vectors, `--mode {direct,http}` |
 | `compose.yaml` | Floci emulator and Ollama on one bridge network |
-| `mathematical_proofs.md` | bounds for the scanners and the budget |
 | `src/requirements.txt` | empty: the runtime is standard library only |
 
 ## Run locally
@@ -104,9 +103,6 @@ Ingress runs credential DLP and injection heuristics; egress runs credential DLP
 - Canonicalisation before matching: NFKC, format-character stripping, whitespace folding, and bounded decoding of
   base64, percent and hex runs.
 - Compression is not decoded. A secret that only appears after gzip is not detected.
-
-The false-positive and false-negative bounds, and the assumptions they rely on, are in
-[mathematical_proofs.md](mathematical_proofs.md).
 
 ## Image pinning
 
